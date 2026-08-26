@@ -1,6 +1,7 @@
 from logging.config import fileConfig
 
 from sqlalchemy import pool
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
@@ -18,13 +19,34 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def get_async_database_url() -> str:
+    """Ensure PostgreSQL uses the asyncpg driver."""
+    database_url = settings.DATABASE_URL
+
+    if database_url.startswith("postgres://"):
+        return database_url.replace(
+            "postgres://",
+            "postgresql+asyncpg://",
+            1,
+        )
+
+    if database_url.startswith("postgresql://"):
+        return database_url.replace(
+            "postgresql://",
+            "postgresql+asyncpg://",
+            1,
+        )
+
+    return database_url
+
+
 def run_migrations_offline() -> None:
     """Run migrations in offline mode."""
 
-    url = settings.DATABASE_URL
+    database_url = get_async_database_url()
 
     context.configure(
-        url=url,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -34,7 +56,7 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection) -> None:
+def do_run_migrations(connection: Connection) -> None:
     """Run migrations using an active database connection."""
 
     context.configure(
@@ -51,22 +73,7 @@ async def run_async_migrations() -> None:
 
     configuration = config.get_section(config.config_ini_section)
 
-    database_url = settings.DATABASE_URL
-
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace(
-            "postgres://",
-            "postgresql+asyncpg://",
-            1,
-        )
-    elif database_url.startswith("postgresql://"):
-        database_url = database_url.replace(
-            "postgresql://",
-            "postgresql+asyncpg://",
-            1,
-        )
-
-    configuration["sqlalchemy.url"] = database_url
+    configuration["sqlalchemy.url"] = get_async_database_url()
 
     connectable = async_engine_from_config(
         configuration,
