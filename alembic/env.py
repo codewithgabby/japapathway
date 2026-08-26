@@ -7,15 +7,7 @@ from alembic import context
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models.user import User
-from app.models.pathway import (
-    ImmigrationPathway,
-    RoadmapStep,
-    UserRoadmap,
-    UserRoadmapStep,
-)
-from app.models.system import SystemConfiguration, FeatureFlag
-from app.models.audit import AuditLog
+import app.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
