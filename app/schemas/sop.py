@@ -398,3 +398,11 @@ class DocumentRelationshipResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+
+# Resolve Pydantic forward references
+
+DocumentTemplateDetailResponse.model_rebuild()
+DocumentTemplateSectionDetailResponse.model_rebuild()
+ApplicantDocumentDetailResponse.model_rebuild()
