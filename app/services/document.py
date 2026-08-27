@@ -342,7 +342,8 @@ class DocumentService:
                 existing.append(item)
 
         await db.flush()
-
+        await db.commit()
+        
         return existing
     
     @staticmethod

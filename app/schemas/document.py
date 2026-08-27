@@ -1,6 +1,6 @@
 # app/schemas/document.py
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 
@@ -107,7 +107,7 @@ class PathwayDocumentRequirementResponse(BaseModel):
 # ========== User Document Checklist Schemas ==========
 
 class UserDocumentStatusUpdate(BaseModel):
-    status: str = Field(..., description="ready or not_ready")
+    status: Literal["ready", "not_ready"]
     notes: Optional[str] = None
 
 
