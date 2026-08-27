@@ -38,3 +38,8 @@ Thumbs.db
 verify_sprint*.py
 fix_sprint6_db.py
 cleanup.py
+alembic/versions_backup/
+inspect_schema.py
+reset_alembic_version.py
+check_tables.py
+check_draft_columns.py
