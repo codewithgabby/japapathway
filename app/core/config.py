@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # Admin Seed
     SUPERUSER_EMAIL: str
     SUPERUSER_PASSWORD: str
+
+    # AI
+    AI_PROVIDER: str = "mock"
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-5.6"
 
     model_config = SettingsConfigDict(
         env_file=".env",

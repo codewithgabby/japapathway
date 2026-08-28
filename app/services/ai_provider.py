@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional, List
 from abc import ABC, abstractmethod
 
 from app.core.config import settings
+from openai import AsyncOpenAI
 
 
 class AIProvider(ABC):
@@ -101,10 +102,7 @@ class MockAIProvider(AIProvider):
 
 class OpenAIProvider(AIProvider):
     """
-    OpenAI provider.
-
-    The actual OpenAI API integration will be implemented when
-    the application is configured to use OpenAI.
+    OpenAI provider using the OpenAI Responses API.
     """
 
     def __init__(self, api_key: Optional[str] = None):
@@ -112,6 +110,15 @@ class OpenAIProvider(AIProvider):
             settings,
             "OPENAI_API_KEY",
             None
+        )
+
+        if not self.api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is required when using the OpenAI provider."
+            )
+
+        self.client = AsyncOpenAI(
+            api_key=self.api_key
         )
 
     async def generate(
@@ -122,10 +129,13 @@ class OpenAIProvider(AIProvider):
         **kwargs
     ) -> str:
 
-        raise NotImplementedError(
-            "OpenAI provider is not yet configured. "
-            "Use MockAIProvider for development and testing."
+        response = await self.client.responses.create(
+            model=self.model_name,
+            instructions=system_prompt,
+            input=user_prompt,
         )
+
+        return response.output_text
 
     @property
     def provider_name(self) -> str:
@@ -136,9 +146,8 @@ class OpenAIProvider(AIProvider):
         return getattr(
             settings,
             "OPENAI_MODEL",
-            "not-configured"
+            "gpt-5.6-luna"
         )
-
 
 class AIProviderFactory:
     """Factory responsible for creating the configured AI provider."""
