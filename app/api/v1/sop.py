@@ -726,5 +726,7 @@ async def finalize_draft(
     return FinalizeDraftResponse(
         status=result["status"],
         document_status=result["document_status"],
+        draft_id=result["draft_id"],
+        draft_version=result["draft_version"],
         message=result["message"],
     )
