@@ -121,6 +121,8 @@ async def create_template(
         str(template.id), {"name": template.name, "type": template.document_type.value}
     )
     
+    await db.commit()
+
     return template
 
 @router.put("/sop/templates/{template_id}", response_model=DocumentTemplateResponse)
