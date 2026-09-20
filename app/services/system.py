@@ -62,6 +62,7 @@ class SystemService:
             config.description = description
         
         await db.flush()
+        await db.commit()
         await db.refresh(config)
         return config
     
