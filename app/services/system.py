@@ -140,6 +140,7 @@ class SystemService:
         
         feature.is_enabled = is_enabled
         await db.flush()
+        await db.commit()
         await db.refresh(feature)
         return feature
     
