@@ -223,6 +223,7 @@ class UserRoadmapService:
             db.add(user_step)
 
         await db.flush()
+        await db.commit()
 
         return new_roadmap
     
