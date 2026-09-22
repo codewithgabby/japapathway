@@ -312,7 +312,7 @@ class SOPService:
         await db.flush()
         await db.commit()
         await db.refresh(section)
-        
+
         return section
 
     @staticmethod
@@ -358,7 +358,9 @@ class SOPService:
         db.add(question)
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(question)
+        
         return question
 
     @staticmethod
