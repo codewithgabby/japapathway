@@ -171,7 +171,7 @@ class SOPService:
         await db.flush()
         await db.commit()
         await db.refresh(template)
-        
+
         return template
 
     @staticmethod
@@ -194,7 +194,10 @@ class SOPService:
             template.version += 1
 
         await db.flush()
+        await db.commit()
 
+        await db.refresh(template)
+        
         return template
 
     @staticmethod
