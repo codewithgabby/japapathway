@@ -330,7 +330,7 @@ class SOPService:
         section.soft_delete(user_id)
 
         await db.flush()
-
+        await db.commit()
     # ============================================================
     # ADMIN: QUESTION CRUD
     # ============================================================
