@@ -169,7 +169,9 @@ class SOPService:
         template.updated_by = user_id
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(template)
+        
         return template
 
     @staticmethod
