@@ -190,7 +190,9 @@ class ContentService:
             category.version += 1
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(category)
+        
         return category
 
     @staticmethod
