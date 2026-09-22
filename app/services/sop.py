@@ -360,7 +360,7 @@ class SOPService:
         await db.flush()
         await db.commit()
         await db.refresh(question)
-        
+
         return question
 
     @staticmethod
@@ -443,6 +443,7 @@ class SOPService:
         question.soft_delete(user_id)
 
         await db.flush()
+        await db.commit()
 
     # ============================================================
     # APPLICANT: DOCUMENT MANAGEMENT
