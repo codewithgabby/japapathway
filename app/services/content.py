@@ -159,7 +159,8 @@ class ContentService:
         category.updated_by = user_id
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(category)
         return category
 
     @staticmethod
