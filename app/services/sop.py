@@ -245,7 +245,7 @@ class SOPService:
         await db.flush()
         await db.commit()
         await db.refresh(section)
-        
+
         return section
 
     @staticmethod
@@ -310,7 +310,9 @@ class SOPService:
         section.updated_by = user_id
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(section)
+        
         return section
 
     @staticmethod
