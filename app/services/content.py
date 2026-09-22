@@ -456,7 +456,9 @@ class ContentService:
         article.status = ContentStatus.DRAFT
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(article)
+        
         return article
 
     @staticmethod
