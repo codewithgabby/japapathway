@@ -558,7 +558,7 @@ class ContentService:
         await db.flush()
         await db.commit()
         await db.refresh(article)
-        
+
         return article
 
     @staticmethod
@@ -576,6 +576,7 @@ class ContentService:
         article.soft_delete(user_id)
 
         await db.flush()
+        await db.commit()
 
     # ============================================================
     # VERSION MANAGEMENT
