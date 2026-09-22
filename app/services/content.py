@@ -192,7 +192,7 @@ class ContentService:
         await db.flush()
         await db.commit()
         await db.refresh(category)
-        
+
         return category
 
     @staticmethod
@@ -210,6 +210,7 @@ class ContentService:
         category.soft_delete(user_id)
 
         await db.flush()
+        await db.commit()
 
     # ============================================================
     # CONTENT ARTICLE
