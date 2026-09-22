@@ -458,7 +458,7 @@ class ContentService:
         await db.flush()
         await db.commit()
         await db.refresh(article)
-        
+
         return article
 
     @staticmethod
@@ -556,7 +556,9 @@ class ContentService:
         article.updated_by = user_id
 
         await db.flush()
-
+        await db.commit()
+        await db.refresh(article)
+        
         return article
 
     @staticmethod
