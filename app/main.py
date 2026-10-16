@@ -35,11 +35,13 @@ async def lifespan(app: FastAPI):
     # Database schema is managed exclusively by Alembic.
     # Do NOT create tables automatically here.
 
-    # Seed default data
-    from app.db.seed import seed_database
+    # Sample data is deliberately opt-in. Production and normal local starts
+    # must not create test content or a default administrator automatically.
+    if settings.AUTO_SEED_DATABASE:
+        from app.db.seed import seed_database
 
-    async with AsyncSessionLocal() as session:
-        await seed_database(session)
+        async with AsyncSessionLocal() as session:
+            await seed_database(session)
 
     yield
 

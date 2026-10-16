@@ -24,9 +24,13 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5500",
+        "http://localhost:5173",
     ]
 
-    # Admin Seed
+    # Development bootstrap. Keep this disabled unless sample data is explicitly wanted.
+    AUTO_SEED_DATABASE: bool = False
+
+    # Admin bootstrap credentials
     SUPERUSER_EMAIL: str
     SUPERUSER_PASSWORD: str
 

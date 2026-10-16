@@ -69,7 +69,7 @@ class DocumentTemplateResponse(BaseModel):
 
 
 class DocumentTemplateDetailResponse(DocumentTemplateResponse):
-    sections: List["DocumentTemplateSectionResponse"] = Field(
+    sections: List["DocumentTemplateSectionDetailResponse"] = Field(
         default_factory=list
     )
 
