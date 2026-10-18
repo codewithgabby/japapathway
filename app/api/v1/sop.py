@@ -550,6 +550,70 @@ async def get_document_drafts(
     return result
 
 
+@router.get(
+    "/sop/my-documents/{document_id}/sections/{section_id}/drafts",
+    response_model=List[ApplicantDraftResponse],
+)
+async def get_section_draft_history(
+    document_id: str,
+    section_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all saved, non-deleted draft versions for one section
+    of the current user's document.
+    """
+
+    drafts = await SOPService.get_draft_history(
+        db,
+        document_id,
+        section_id,
+        str(current_user.id),
+    )
+
+    result = []
+
+    for draft in drafts:
+        section = await SOPService.get_section(
+            db,
+            str(draft.section_id),
+        )
+
+        generation_status = draft.generation_status
+
+        if generation_status is not None and hasattr(
+            generation_status,
+            "value",
+        ):
+            generation_status = generation_status.value
+
+        result.append(
+            ApplicantDraftResponse(
+                id=str(draft.id),
+                section_id=str(draft.section_id),
+                section_name=section.name,
+                content=draft.content,
+                ai_provider=draft.ai_provider,
+                ai_model=draft.ai_model,
+                version=draft.version,
+                is_current=draft.is_current,
+                generation_status=generation_status,
+                missing_information=draft.missing_information,
+                warnings=draft.warnings,
+                knowledge_sources=draft.knowledge_sources,
+                source_draft_id=(
+                    str(draft.source_draft_id)
+                    if draft.source_draft_id
+                    else None
+                ),
+                created_at=draft.created_at,
+            )
+        )
+
+    return result    
+
+
 # ============================================================
 # RELATIONSHIP ENDPOINTS
 # ============================================================
