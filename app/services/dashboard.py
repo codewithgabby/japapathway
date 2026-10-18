@@ -83,7 +83,7 @@ class DashboardService:
                 "status": summary.get("status"),
                 "completed_steps": summary.get("completed_steps", 0),
                 "total_steps": summary.get("total_steps", 0),
-                "completion_percentage": summary.get("completion_percentage", 0),
+                "completion_percentage": summary.get("progress_percentage", 0),
                 "next_step": summary.get("next_step"),
             }
         except NotFoundException:
