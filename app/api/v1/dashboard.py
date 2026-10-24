@@ -64,6 +64,9 @@ async def get_dashboard(
             )
             for doc in data["sop_documents"]
         ],
+
+        journeys=data["journey"].get("journeys", []),
+        readiness_by_pathway=data["readiness"].get("readiness_by_pathway", []),
         next_action=DashboardNextActionResponse(
             type=data["next_action"]["type"],
             title=data["next_action"]["title"],

@@ -5,7 +5,7 @@ from app.models.user import User
 from app.services.user_roadmap import UserRoadmapService
 from app.services.document import DocumentService
 from app.services.sop import SOPService
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import NotFoundException, BadRequestException
 
 
 class DashboardService:
@@ -56,96 +56,132 @@ class DashboardService:
         }
 
     @staticmethod
-    async def _build_journey_section(db: AsyncSession, user_id: str) -> Dict[str, Any]:
+    async def _build_journey_section(
+        db: AsyncSession,
+        user_id: str,
+    ) -> Dict[str, Any]:
         """
-        Get user's active roadmap state.
-        Gracefully handles no roadmap.
+        Return all active journeys while preserving the legacy single-journey
+        fields for backward compatibility.
         """
-        try:
-            summary = await UserRoadmapService.get_roadmap_summary(db, user_id)
+        summaries = await UserRoadmapService.get_all_roadmap_summaries(
+            db,
+            user_id,
+        )
 
-            if summary.get("status") == "no_roadmap":
-                return {
-                    "has_roadmap": False,
-                    "pathway_name": None,
-                    "pathway_slug": None,
-                    "status": None,
-                    "completed_steps": 0,
-                    "total_steps": 0,
-                    "completion_percentage": 0,
-                    "next_step": None,
-                }
-
-            return {
+        journeys = [
+            {
+                "id": summary.get("id"),
+                "pathway_id": summary.get("pathway_id"),
                 "has_roadmap": True,
                 "pathway_name": summary.get("pathway_name"),
                 "pathway_slug": summary.get("pathway_slug"),
                 "status": summary.get("status"),
                 "completed_steps": summary.get("completed_steps", 0),
                 "total_steps": summary.get("total_steps", 0),
-                "completion_percentage": summary.get("progress_percentage", 0),
+                "completion_percentage": summary.get(
+                    "progress_percentage", 0
+                ),
                 "next_step": summary.get("next_step"),
             }
-        except NotFoundException:
+            for summary in summaries
+        ]
+
+        # Preserve the existing single-journey response fields temporarily.
+        if journeys:
+            primary_journey = journeys[0]
             return {
-                "has_roadmap": False,
-                "pathway_name": None,
-                "pathway_slug": None,
-                "status": None,
-                "completed_steps": 0,
-                "total_steps": 0,
-                "completion_percentage": 0,
-                "next_step": None,
+                **primary_journey,
+                "journeys": journeys,
+                "journey_count": len(journeys),
             }
+
+        return {
+            "id": None,
+            "pathway_id": None,
+            "has_roadmap": False,
+            "pathway_name": None,
+            "pathway_slug": None,
+            "status": None,
+            "completed_steps": 0,
+            "total_steps": 0,
+            "completion_percentage": 0,
+            "next_step": None,
+            "journeys": [],
+            "journey_count": 0,
+        }
 
     @staticmethod
-    async def _build_readiness_section(db: AsyncSession, user_id: str) -> Dict[str, Any]:
+    async def _build_readiness_section(
+        db: AsyncSession,
+        user_id: str,
+    ) -> Dict[str, Any]:
         """
-        Get user's document readiness state.
-        Gracefully handles no checklist.
+        Build an independent document-readiness summary for each active
+        immigration journey.
         """
-        try:
-            # Get active roadmap first to find pathway
-            summary = await UserRoadmapService.get_roadmap_summary(db, user_id)
+        summaries = await UserRoadmapService.get_all_roadmap_summaries(
+            db,
+            user_id,
+        )
 
-            if summary.get("status") == "no_roadmap":
-                return {
-                    "has_checklist": False,
-                    "pathway_name": None,
-                    "completion_percentage": 0,
-                    "total_required": 0,
-                    "completed_required": 0,
-                    "missing_required": 0,
-                    "missing_documents": [],
-                }
+        readiness_by_pathway = []
 
-            # Get pathway ID from roadmap
-            roadmap = await UserRoadmapService.get_user_roadmap(db, user_id)
-            pathway_id = str(roadmap.pathway_id)
+        for summary in summaries:
+            pathway_id = summary.get("pathway_id")
 
-            readiness = await DocumentService.get_readiness_summary(
-                db, user_id, pathway_id
-            )
+            if not pathway_id:
+                continue
+
+            try:
+                readiness = await DocumentService.get_readiness_summary(
+                    db,
+                    user_id,
+                    pathway_id,
+                )
+
+                readiness_by_pathway.append({
+                    "has_checklist": True,
+                    "pathway_id": readiness.get("pathway_id"),
+                    "pathway_name": readiness.get("pathway_name"),
+                    "pathway_slug": readiness.get("pathway_slug"),
+                    "completion_percentage": readiness.get(
+                        "completion_percentage", 0
+                    ),
+                    "total_required": readiness.get("total_required", 0),
+                    "completed_required": readiness.get(
+                        "completed_required", 0
+                    ),
+                    "missing_required": readiness.get("missing_required", 0),
+                    "missing_documents": readiness.get(
+                        "missing_documents", []
+                    ),
+                })
+
+            except (NotFoundException, BadRequestException):
+                continue
+
+        # Preserve the legacy single-checklist fields temporarily.
+        if readiness_by_pathway:
+            primary = readiness_by_pathway[0]
 
             return {
-                "has_checklist": True,
-                "pathway_name": readiness.get("pathway_name"),
-                "completion_percentage": readiness.get("completion_percentage", 0),
-                "total_required": readiness.get("total_required", 0),
-                "completed_required": readiness.get("completed_required", 0),
-                "missing_required": readiness.get("missing_required", 0),
-                "missing_documents": readiness.get("missing_documents", []),
+                **primary,
+                "readiness_by_pathway": readiness_by_pathway,
             }
-        except NotFoundException:
-            return {
-                "has_checklist": False,
-                "pathway_name": None,
-                "completion_percentage": 0,
-                "total_required": 0,
-                "completed_required": 0,
-                "missing_required": 0,
-                "missing_documents": [],
-            }
+
+        return {
+            "has_checklist": False,
+            "pathway_id": None,
+            "pathway_name": None,
+            "pathway_slug": None,
+            "completion_percentage": 0,
+            "total_required": 0,
+            "completed_required": 0,
+            "missing_required": 0,
+            "missing_documents": [],
+            "readiness_by_pathway": [],
+        }
 
     @staticmethod
     async def _build_sop_section(db: AsyncSession, user_id: str) -> List[Dict[str, Any]]:
@@ -207,6 +243,7 @@ class DashboardService:
 
     # ========== Next Action Logic ==========
 
+
     @staticmethod
     def _determine_next_action(
         journey_section: Dict[str, Any],
@@ -214,80 +251,154 @@ class DashboardService:
         sop_documents: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """
-        Deterministic next-action strategy based ONLY on existing application state.
-        Priority: needs_clarification > continue_sop > review_draft > complete_readiness > continue_roadmap > start_roadmap > no_action
+        Determine the next action from existing application state.
+
+        Priority:
+        needs_clarification > continue_sop > review_draft >
+        complete_readiness > continue_roadmap > start_roadmap > no_action
         """
 
-        # 1. needs_clarification — any draft with missing information
+        # 1. Resolve missing information in any SOP/LOE draft.
         for doc in sop_documents:
             latest_draft = doc.get("latest_draft")
-            if latest_draft and latest_draft.get("generation_status") == "needs_clarification":
+
+            if latest_draft and (
+                latest_draft.get("generation_status") == "needs_clarification"
+                or latest_draft.get("missing_information_count", 0) > 0
+            ):
                 return {
                     "type": "needs_clarification",
                     "title": "Resolve missing information",
-                    "description": f"Your {doc.get('document_type', 'document').upper()} has missing information that needs your attention.",
-                    "priority": "high",
-                }
-            if latest_draft and latest_draft.get("missing_information_count", 0) > 0:
-                return {
-                    "type": "needs_clarification",
-                    "title": "Resolve missing information",
-                    "description": f"Your {doc.get('document_type', 'document').upper()} has {latest_draft['missing_information_count']} missing item(s).",
+                    "description": (
+                        f"Your {doc.get('document_type', 'document').upper()} "
+                        "has missing information that needs your attention."
+                    ),
                     "priority": "high",
                 }
 
-        # 2. continue_sop — SOP with unanswered questions
+        # 2. Continue questionnaires with unanswered questions.
         for doc in sop_documents:
-            if doc.get("answered_questions", 0) < doc.get("total_questions", 0):
-                remaining = doc["total_questions"] - doc["answered_questions"]
+            answered = doc.get("answered_questions", 0)
+            total = doc.get("total_questions", 0)
+
+            if answered < total:
+                remaining = total - answered
+                document_type = doc.get("document_type", "SOP").upper()
+
                 return {
                     "type": "continue_sop",
-                    "title": f"Continue your {doc.get('document_type', 'SOP').upper()}",
-                    "description": f"You have {remaining} unanswered question(s) in your {doc.get('document_type', 'SOP').upper()}.",
+                    "title": f"Continue your {document_type}",
+                    "description": (
+                        f"You have {remaining} unanswered question(s) "
+                        f"in your {document_type}."
+                    ),
                     "priority": "high",
                 }
 
-        # 3. review_draft — generated draft not yet finalized
+        # 3. Review a generated draft that has not been finalized.
         for doc in sop_documents:
             if doc.get("status") == "generated" and doc.get("latest_draft"):
                 return {
                     "type": "review_draft",
                     "title": "Review your generated draft",
-                    "description": f"Your {doc.get('document_type', 'SOP').upper()} draft is ready for review.",
+                    "description": (
+                        f"Your {doc.get('document_type', 'SOP').upper()} "
+                        "draft is ready for review."
+                    ),
                     "priority": "normal",
                 }
 
-        # 4. complete_readiness — missing required documents
-        if readiness_section.get("has_checklist") and readiness_section.get("missing_required", 0) > 0:
+        # 4. Check readiness across every active pathway.
+        readiness_items = readiness_section.get("readiness_by_pathway", [])
+
+        incomplete_readiness = next(
+            (
+                item
+                for item in readiness_items
+                if item.get("has_checklist")
+                and item.get("missing_required", 0) > 0
+            ),
+            None,
+        )
+
+        # Backward-compatible fallback for the legacy single-checklist shape.
+        if incomplete_readiness is None and not readiness_items:
+            if (
+                readiness_section.get("has_checklist")
+                and readiness_section.get("missing_required", 0) > 0
+            ):
+                incomplete_readiness = readiness_section
+
+        if incomplete_readiness:
+            pathway_name = incomplete_readiness.get(
+                "pathway_name", "your immigration pathway"
+            )
+            missing = incomplete_readiness.get("missing_required", 0)
+
             return {
                 "type": "complete_readiness",
                 "title": "Complete document checklist",
-                "description": f"You have {readiness_section['missing_required']} missing required document(s).",
+                "description": (
+                    f"Your {pathway_name} checklist has "
+                    f"{missing} missing required document(s)."
+                ),
                 "priority": "normal",
             }
 
-        # 5. continue_roadmap — active roadmap with incomplete steps
-        if journey_section.get("has_roadmap") and journey_section.get("completion_percentage", 0) < 100:
+        # 5. Continue any active journey that has incomplete steps.
+        journeys = journey_section.get("journeys", [])
+
+        incomplete_journey = next(
+            (
+                item
+                for item in journeys
+                if item.get("has_roadmap")
+                and item.get("completion_percentage", 0) < 100
+            ),
+            None,
+        )
+
+        # Backward-compatible fallback for the legacy single-journey shape.
+        if incomplete_journey is None and not journeys:
+            if (
+                journey_section.get("has_roadmap")
+                and journey_section.get("completion_percentage", 0) < 100
+            ):
+                incomplete_journey = journey_section
+
+        if incomplete_journey:
+            pathway_name = incomplete_journey.get(
+                "pathway_name", "your immigration journey"
+            )
+            percentage = incomplete_journey.get("completion_percentage", 0)
+
             return {
                 "type": "continue_roadmap",
                 "title": "Continue your journey",
-                "description": f"Your {journey_section.get('pathway_name', 'roadmap')} is {journey_section.get('completion_percentage', 0)}% complete.",
+                "description": (
+                    f"Your {pathway_name} is {percentage}% complete."
+                ),
                 "priority": "normal",
             }
 
-        # 6. start_roadmap — no roadmap
+        # 6. Start a journey if the applicant has none.
         if not journey_section.get("has_roadmap"):
             return {
                 "type": "start_roadmap",
                 "title": "Start your immigration journey",
-                "description": "Choose a pathway to begin your personalized roadmap.",
+                "description": (
+                    "Choose a pathway to begin your personalized roadmap."
+                ),
                 "priority": "high",
             }
 
-        # 7. no_action — everything complete
+        # 7. All currently evaluated actions are complete.
         return {
             "type": "no_action",
             "title": "You're all caught up",
-            "description": "No pending actions. Review your journey or prepare for next steps.",
+            "description": (
+                "No pending actions. Review your journeys or prepare "
+                "for next steps."
+            ),
             "priority": "low",
         }

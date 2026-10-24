@@ -91,9 +91,12 @@ class DashboardNextActionResponse(BaseModel):
 
 # ========== Full Dashboard Response ==========
 
+
 class DashboardResponse(BaseModel):
     user: DashboardUserResponse
     journey: DashboardJourneyResponse
+    journeys: List[Dict[str, Any]] = Field(default_factory=list)
     readiness: DashboardReadinessResponse
+    readiness_by_pathway: List[Dict[str, Any]] = Field(default_factory=list)
     sop_documents: List[DashboardSOPDocumentResponse] = Field(default_factory=list)
     next_action: DashboardNextActionResponse
