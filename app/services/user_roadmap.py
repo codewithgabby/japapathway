@@ -24,17 +24,22 @@ class UserRoadmapService:
         if pathway.status != PathwayStatus.PUBLISHED:
             raise BadRequestException("Pathway is not available")
         
-        # Check if user already has an active roadmap
+        # Prevent duplicate active roadmaps for the same pathway.
+        # Applicants may have multiple different pathways active simultaneously.
         result = await db.execute(
             select(UserRoadmap).where(
                 UserRoadmap.user_id == user_id,
+                UserRoadmap.pathway_id == pathway_id,
                 UserRoadmap.status == UserRoadmapStatus.ACTIVE,
                 UserRoadmap.is_deleted.is_(False)
             )
         )
         existing = result.scalar_one_or_none()
+
         if existing:
-            raise BadRequestException("You already have an active roadmap")
+            raise BadRequestException(
+                "You already have an active roadmap for this pathway"
+            )
         
         # Get all active steps
         steps = await PathwayService.get_pathway_steps(db, pathway_id)
