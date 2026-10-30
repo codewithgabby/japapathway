@@ -426,6 +426,8 @@ class SOPService:
         question.updated_by = user_id
 
         await db.flush()
+        await db.commit()
+        await db.refresh(question)
 
         return question
 
@@ -504,7 +506,6 @@ class SOPService:
         await db.flush()
 
         return applicant_document
-
 
     @staticmethod
     async def get_applicant_document(
