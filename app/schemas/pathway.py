@@ -143,11 +143,15 @@ class UserRoadmapResponse(BaseModel):
 
 
 class UserRoadmapSummaryResponse(BaseModel):
-    id: UUID
-    pathway_name: str
-    pathway_slug: str
-    status: UserRoadmapStatus
+    id: Optional[UUID] = None
+    pathway_id: Optional[UUID] = None
+    pathway_name: Optional[str] = None
+    pathway_slug: Optional[str] = None
+    status: str
+    completed_steps: int
+    total_steps: int
     progress_percentage: int
+    next_step: Optional[dict] = None
 
     class Config:
         from_attributes = True
